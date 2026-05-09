@@ -2,10 +2,10 @@
 
 namespace App\Filament\Resources\Kelas\Schemas;
 
+use App\Models\Kelas;
 use App\Services\KelasProvisioningService;
 use Filament\Forms\Components\Placeholder;
 use Filament\Forms\Components\Select;
-use Filament\Forms\Components\TextInput;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Components\Utilities\Get;
 use Filament\Schemas\Schema;
@@ -33,10 +33,17 @@ class KelasForm
                                 ->all())
                             ->required()
                             ->live(),
-                        TextInput::make('rombel')
+                        Select::make('rombel')
+                            ->label('Rombel')
+                            ->options(fn (Get $get, ?Kelas $record): array => app(KelasProvisioningService::class)->availableRombelOptions(
+                                $get('tingkat'),
+                                $get('tahun_ajaran'),
+                                $record,
+                            ))
                             ->required()
-                            ->maxLength(10)
-                            ->live(onBlur: true),
+                            ->searchable()
+                            ->preload()
+                            ->live(),
                         Select::make('tahun_ajaran')
                             ->options(app(KelasProvisioningService::class)->yearOptions())
                             ->required()

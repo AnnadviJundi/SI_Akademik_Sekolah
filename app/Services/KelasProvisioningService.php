@@ -31,6 +31,11 @@ class KelasProvisioningService
         12 => 'XII',
     ];
 
+    public const ROMBEL_OPTIONS = [
+        'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M',
+        'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z',
+    ];
+
     public function create(array $data): Kelas
     {
         return DB::transaction(function () use ($data): Kelas {
@@ -92,6 +97,92 @@ class KelasProvisioningService
             'tingkat' => $tingkat ? (string) $tingkat : null,
             'rombel' => $this->extractRombel($kelas),
         ];
+    }
+
+    public function availableRombelOptions(mixed $tingkat, ?string $tahunAjaran, ?Kelas $ignore = null): array
+    {
+        $romanGrade = $this->romanizeGrade($tingkat);
+
+        if (! $romanGrade || blank($tahunAjaran)) {
+            return collect(self::ROMBEL_OPTIONS)
+                ->mapWithKeys(fn (string $rombel): array => [$rombel => $rombel])
+                ->all();
+        }
+
+        $query = Kelas::query()
+            ->where('tingkat', $romanGrade)
+            ->where('tahun_ajaran', $tahunAjaran);
+
+        if ($ignore?->exists) {
+            $query->whereKeyNot($ignore->getKey());
+        }
+
+        $usedRombels = $query
+            ->get()
+            ->map(fn (Kelas $kelas): ?string => $this->extractRombel($kelas))
+            ->filter()
+            ->unique()
+            ->values()
+            ->all();
+
+        return collect(self::ROMBEL_OPTIONS)
+            ->reject(fn (string $rombel): bool => in_array($rombel, $usedRombels, true))
+            ->mapWithKeys(fn (string $rombel): array => [$rombel => $rombel])
+            ->all();
+    }
+
+    public function promoteActiveClassesToAcademicYear(string $tahunAjaran): array
+    {
+        return DB::transaction(function () use ($tahunAjaran): array {
+            $createdRecords = [];
+            $skippedRecords = [];
+
+            $this->ensureAcademicYearSemesters($tahunAjaran);
+
+            $activeClasses = Kelas::query()
+                ->where('status', 'active')
+                ->where('tahun_ajaran', '!=', $tahunAjaran)
+                ->orderBy('tingkat')
+                ->orderBy('nama_kelas')
+                ->get();
+
+            foreach ($activeClasses as $kelas) {
+                $formState = $this->inferFormState($kelas);
+                $targetCode = $this->previewCode(
+                    $formState['jenjang'],
+                    $formState['tingkat'],
+                    $formState['rombel'],
+                    $tahunAjaran,
+                );
+
+                if ($targetCode === '-') {
+                    continue;
+                }
+
+                $existingTarget = Kelas::query()->where('kode_kelas', $targetCode)->first();
+
+                if ($existingTarget) {
+                    $skippedRecords[] = $existingTarget;
+
+                    continue;
+                }
+
+                $createdRecords[] = $this->create([
+                    'jenjang' => $formState['jenjang'],
+                    'tingkat' => $formState['tingkat'],
+                    'rombel' => $formState['rombel'],
+                    'tahun_ajaran' => $tahunAjaran,
+                    'status' => $kelas->status,
+                ]);
+            }
+
+            return [
+                'created' => count($createdRecords),
+                'skipped' => count($skippedRecords),
+                'created_records' => $createdRecords,
+                'skipped_records' => $skippedRecords,
+            ];
+        });
     }
 
     public function previewCode(?string $jenjang, mixed $tingkat, ?string $rombel, ?string $tahunAjaran): string

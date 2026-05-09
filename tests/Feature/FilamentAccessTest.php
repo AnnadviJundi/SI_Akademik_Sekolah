@@ -400,6 +400,15 @@ class FilamentAccessTest extends TestCase
             ->assertDontSee('data[nama_kelas]');
     }
 
+    public function test_list_kelas_page_shows_naik_tahun_ajaran_action(): void
+    {
+        $admin = $this->user('admin', 'admin.kelas.promote');
+
+        $this->actingAs($admin)->get('/admin/kelas')
+            ->assertOk()
+            ->assertSee('Naik Tahun Ajaran');
+    }
+
     public function test_kelas_provisioning_service_generates_class_identity_and_semesters(): void
     {
         $kelas = app(KelasProvisioningService::class)->create([
@@ -438,6 +447,87 @@ class FilamentAccessTest extends TestCase
         $this->assertSame('SMA-XIB-2028', $kelas->kode_kelas);
         $this->assertSame('XI B - 2028/2029', $kelas->nama_kelas);
         $this->assertSame('XI', $kelas->tingkat);
+    }
+
+    public function test_kelas_provisioning_service_returns_only_available_rombels_for_target_year(): void
+    {
+        Kelas::query()->create([
+            'kode_kelas' => 'SMP-VIIA-2027',
+            'nama_kelas' => 'VII A - 2027/2028',
+            'tingkat' => 'VII',
+            'tahun_ajaran' => '2027/2028',
+            'status' => 'active',
+        ]);
+        Kelas::query()->create([
+            'kode_kelas' => 'SMP-VIIB-2027',
+            'nama_kelas' => 'VII B - 2027/2028',
+            'tingkat' => 'VII',
+            'tahun_ajaran' => '2027/2028',
+            'status' => 'active',
+        ]);
+
+        $options = app(KelasProvisioningService::class)->availableRombelOptions('VII', '2027/2028');
+
+        $this->assertArrayNotHasKey('A', $options);
+        $this->assertArrayNotHasKey('B', $options);
+        $this->assertSame('C', $options['C']);
+        $this->assertSame('Z', $options['Z']);
+    }
+
+    public function test_kelas_provisioning_service_promotes_active_classes_and_skips_duplicates(): void
+    {
+        Kelas::query()->create([
+            'kode_kelas' => 'SMP-VIIA-2026',
+            'nama_kelas' => 'VII A - 2026/2027',
+            'tingkat' => 'VII',
+            'tahun_ajaran' => '2026/2027',
+            'status' => 'active',
+        ]);
+        Kelas::query()->create([
+            'kode_kelas' => 'SMP-VIIB-2026',
+            'nama_kelas' => 'VII B - 2026/2027',
+            'tingkat' => 'VII',
+            'tahun_ajaran' => '2026/2027',
+            'status' => 'active',
+        ]);
+        Kelas::query()->create([
+            'kode_kelas' => 'SMP-VIIA-2027',
+            'nama_kelas' => 'VII A - 2027/2028',
+            'tingkat' => 'VII',
+            'tahun_ajaran' => '2027/2028',
+            'status' => 'active',
+        ]);
+        Kelas::query()->create([
+            'kode_kelas' => 'SMP-IXA-2026',
+            'nama_kelas' => 'IX A - 2026/2027',
+            'tingkat' => 'IX',
+            'tahun_ajaran' => '2026/2027',
+            'status' => 'inactive',
+        ]);
+
+        $result = app(KelasProvisioningService::class)->promoteActiveClassesToAcademicYear('2027/2028');
+
+        $this->assertSame(1, $result['created']);
+        $this->assertSame(1, $result['skipped']);
+        $this->assertSame('SMP-VIIB-2027', $result['created_records'][0]->kode_kelas);
+        $this->assertSame('SMP-VIIA-2027', $result['skipped_records'][0]->kode_kelas);
+
+        $this->assertDatabaseHas('kelas', [
+            'kode_kelas' => 'SMP-VIIB-2027',
+            'nama_kelas' => 'VII B - 2027/2028',
+            'tahun_ajaran' => '2027/2028',
+        ]);
+        $this->assertDatabaseMissing('kelas', [
+            'kode_kelas' => 'SMP-IXA-2027',
+        ]);
+        $this->assertDatabaseHas('semester', [
+            'tahun_ajaran' => '2027/2028',
+            'semester' => 'Ganjil',
+        ]);
+        $this->assertDatabaseHas('semester', [
+            'tahun_ajaran' => '2027/2028',
+            'semester' => 'Genap',
+        ]);
     }
 
     private function user(string $roleCode, string $username): User
