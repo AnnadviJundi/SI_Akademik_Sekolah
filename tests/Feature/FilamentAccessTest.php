@@ -282,6 +282,7 @@ class FilamentAccessTest extends TestCase
             'nama' => 'Guru Mapel',
             'alamat' => 'Jl. Guru',
             'no_telp' => '081111111111',
+            'foto_path' => 'guru-photos/guru-mapel.jpg',
             'status' => 'active',
         ]);
 
@@ -304,7 +305,8 @@ class FilamentAccessTest extends TestCase
             ->assertSee('Ilmu Pengetahuan Alam')
             ->assertSee('VII A')
             ->assertSee('VII B')
-            ->assertSee('081111111111');
+            ->assertSee('081111111111')
+            ->assertSee('storage/guru-photos/guru-mapel.jpg');
     }
 
     private function user(string $roleCode, string $username): User

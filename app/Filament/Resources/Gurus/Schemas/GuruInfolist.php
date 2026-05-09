@@ -3,8 +3,8 @@
 namespace App\Filament\Resources\Gurus\Schemas;
 
 use App\Models\Guru;
-use Filament\Infolists\Components\ImageEntry;
 use Filament\Infolists\Components\TextEntry;
+use Filament\Infolists\Components\ViewEntry;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Schema;
 
@@ -16,10 +16,9 @@ class GuruInfolist
             ->components([
                 Section::make('Profil Guru')
                     ->schema([
-                        ImageEntry::make('foto_path')
+                        ViewEntry::make('foto_path')
                             ->label('Foto')
-                            ->disk('public')
-                            ->placeholder('-'),
+                            ->view('filament.gurus.teacher-photo-entry'),
                         TextEntry::make('nama'),
                         TextEntry::make('nip')
                             ->label('NIP')
