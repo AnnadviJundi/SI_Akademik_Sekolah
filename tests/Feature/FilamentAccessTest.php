@@ -14,6 +14,7 @@ use App\Models\Semester;
 use App\Models\Siswa;
 use App\Models\User;
 use App\Services\GuruAccountService;
+use App\Services\KelasProvisioningService;
 use App\Filament\Resources\Nilais\NilaiResource;
 use App\Filament\Widgets\StudentsPerAcademicYearChart;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -383,6 +384,45 @@ class FilamentAccessTest extends TestCase
         $this->actingAs($admin)->get('/admin/reports/gurus/pdf')
             ->assertOk()
             ->assertHeader('content-type', 'application/pdf');
+    }
+
+    public function test_create_kelas_page_uses_structured_fields_and_not_manual_name_inputs(): void
+    {
+        $admin = $this->user('admin', 'admin.kelas.create');
+
+        $this->actingAs($admin)->get('/admin/kelas/create')
+            ->assertOk()
+            ->assertSee('Jenjang')
+            ->assertSee('Tingkat')
+            ->assertSee('Rombel')
+            ->assertSee('Tahun ajaran')
+            ->assertDontSee('data[kode_kelas]')
+            ->assertDontSee('data[nama_kelas]');
+    }
+
+    public function test_kelas_provisioning_service_generates_class_identity_and_semesters(): void
+    {
+        $kelas = app(KelasProvisioningService::class)->create([
+            'jenjang' => 'SMP',
+            'tingkat' => '7',
+            'rombel' => 'A',
+            'tahun_ajaran' => '2027/2028',
+            'status' => 'active',
+        ]);
+
+        $this->assertSame('SMP-7A-2027', $kelas->kode_kelas);
+        $this->assertSame('7A - 2027/2028', $kelas->nama_kelas);
+        $this->assertSame('7', $kelas->tingkat);
+        $this->assertSame('2027/2028', $kelas->tahun_ajaran);
+
+        $this->assertDatabaseHas('semester', [
+            'tahun_ajaran' => '2027/2028',
+            'semester' => 'Ganjil',
+        ]);
+        $this->assertDatabaseHas('semester', [
+            'tahun_ajaran' => '2027/2028',
+            'semester' => 'Genap',
+        ]);
     }
 
     private function user(string $roleCode, string $username): User
