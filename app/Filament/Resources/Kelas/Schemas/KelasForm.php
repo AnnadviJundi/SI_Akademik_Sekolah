@@ -3,6 +3,7 @@
 namespace App\Filament\Resources\Kelas\Schemas;
 
 use App\Models\Kelas;
+use App\Services\AcademicPeriodService;
 use App\Services\KelasProvisioningService;
 use Filament\Forms\Components\Placeholder;
 use Filament\Forms\Components\Select;
@@ -47,7 +48,8 @@ class KelasForm
                         Select::make('tahun_ajaran')
                             ->options(app(KelasProvisioningService::class)->yearOptions())
                             ->required()
-                            ->default(array_key_first(app(KelasProvisioningService::class)->yearOptions()))
+                            ->default(fn (): ?string => app(AcademicPeriodService::class)->getActiveAcademicYear()
+                                ?? array_key_first(app(KelasProvisioningService::class)->yearOptions()))
                             ->searchable()
                             ->preload()
                             ->live(),

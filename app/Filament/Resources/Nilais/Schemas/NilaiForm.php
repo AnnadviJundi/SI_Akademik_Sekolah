@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\Nilais\Schemas;
 
+use App\Services\AcademicPeriodService;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Textarea;
@@ -27,6 +28,9 @@ class NilaiForm
                     ->relationship('guru', 'nama'),
                 Select::make('semester_id')
                     ->relationship('semester', 'semester')
+                    ->default(fn (): ?int => app(AcademicPeriodService::class)->getActiveSemester()?->id)
+                    ->searchable()
+                    ->preload()
                     ->required(),
                 Select::make('jenis_nilai')
                     ->options(array_combine(Nilai::JENIS, array_map(fn (string $jenis) => str($jenis)->headline()->toString(), Nilai::JENIS)))

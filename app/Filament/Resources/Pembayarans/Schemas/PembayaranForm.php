@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\Pembayarans\Schemas;
 
+use App\Services\AcademicPeriodService;
 use Filament\Forms\Components\FileUpload;
 use Filament\Forms\Components\DateTimePicker;
 use Filament\Forms\Components\Select;
@@ -23,6 +24,9 @@ class PembayaranForm
                             ->required(),
                         Select::make('semester_id')
                             ->relationship('semester', 'semester')
+                            ->default(fn (): ?int => app(AcademicPeriodService::class)->getActiveSemester()?->id)
+                            ->searchable()
+                            ->preload()
                             ->required(),
                         TextInput::make('jenis_pembayaran')
                             ->required(),

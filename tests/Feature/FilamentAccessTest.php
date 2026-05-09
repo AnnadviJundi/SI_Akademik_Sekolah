@@ -677,6 +677,31 @@ class FilamentAccessTest extends TestCase
         $this->assertSame('2026/2027', app(AcademicPeriodService::class)->getActiveAcademicYear());
     }
 
+    public function test_create_forms_default_to_active_semester_and_academic_year(): void
+    {
+        $admin = $this->user('admin', 'admin.active.defaults');
+
+        Semester::query()->create([
+            'tahun_ajaran' => '2026/2027',
+            'semester' => 'Ganjil',
+            'is_active' => false,
+        ]);
+        $activeSemester = Semester::query()->create([
+            'tahun_ajaran' => '2027/2028',
+            'semester' => 'Genap',
+            'is_active' => true,
+        ]);
+
+        $nilaiPage = $this->actingAs($admin)->get('/admin/nilais/create');
+        $nilaiPage->assertOk()->assertSee((string) $activeSemester->id);
+
+        $pembayaranPage = $this->actingAs($admin)->get('/admin/pembayarans/create');
+        $pembayaranPage->assertOk()->assertSee((string) $activeSemester->id);
+
+        $kelasPage = $this->actingAs($admin)->get('/admin/kelas/create');
+        $kelasPage->assertOk()->assertSee("initialOptionLabel: '2027\\/2028'", false);
+    }
+
     private function user(string $roleCode, string $username): User
     {
         $role = Role::query()->firstOrCreate(['code' => $roleCode], ['name' => str($roleCode)->headline()]);

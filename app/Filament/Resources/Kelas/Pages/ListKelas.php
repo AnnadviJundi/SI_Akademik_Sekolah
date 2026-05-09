@@ -3,6 +3,7 @@
 namespace App\Filament\Resources\Kelas\Pages;
 
 use App\Filament\Resources\Kelas\KelasResource;
+use App\Services\AcademicPeriodService;
 use App\Services\KelasProvisioningService;
 use Filament\Actions\Action;
 use Filament\Actions\CreateAction;
@@ -25,7 +26,8 @@ class ListKelas extends ListRecords
                     Select::make('tahun_ajaran')
                         ->label('Tahun Ajaran Tujuan')
                         ->options(app(KelasProvisioningService::class)->yearOptions())
-                        ->default(array_key_first(app(KelasProvisioningService::class)->yearOptions()))
+                        ->default(fn (): ?string => app(AcademicPeriodService::class)->getActiveAcademicYear()
+                            ?? array_key_first(app(KelasProvisioningService::class)->yearOptions()))
                         ->required()
                         ->searchable()
                         ->preload(),
