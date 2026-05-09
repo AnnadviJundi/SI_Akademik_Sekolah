@@ -8,7 +8,6 @@ use App\Models\MataPelajaran;
 use App\Models\Nilai;
 use App\Models\Pembayaran;
 use App\Models\Pengampu;
-use App\Models\Profil;
 use App\Models\Role;
 use App\Models\Semester;
 use App\Models\Siswa;
@@ -128,13 +127,5 @@ class DatabaseSeeder extends Seeder
             'updated_by' => $tu->id,
         ]);
 
-        Profil::query()->updateOrCreate(['id' => 1], [
-            'nama_sekolah' => 'SMA Akademik Nusantara',
-            'alamat' => 'Jl. Pendidikan No. 1',
-            'telepon' => '021-123456',
-            'email' => 'info@sekolah.test',
-            'created_by' => $admin->id,
-            'updated_by' => $admin->id,
-        ]);
     }
 }
