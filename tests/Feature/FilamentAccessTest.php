@@ -18,6 +18,7 @@ use App\Services\AcademicPeriodService;
 use App\Services\KelasProvisioningService;
 use App\Services\MataPelajaranAssignmentService;
 use App\Services\MataPelajaranCatalogService;
+use App\Services\NilaiFormOptionsService;
 use App\Services\SiswaClassTransferService;
 use App\Filament\Resources\Nilais\NilaiResource;
 use App\Filament\Widgets\StudentsPerAcademicYearChart;
@@ -336,6 +337,66 @@ class FilamentAccessTest extends TestCase
             ->assertSee($guru->nama)
             ->assertSee($semester->semester)
             ->assertSee($semester->tahun_ajaran);
+    }
+
+    public function test_nilai_form_options_service_filters_subjects_and_teachers_by_class_and_semester(): void
+    {
+        [$semester, $kelas, $mapel] = $this->core();
+        $semesterGenap = Semester::query()->create([
+            'tahun_ajaran' => '2026/2027',
+            'semester' => 'Genap',
+            'is_active' => false,
+        ]);
+        $kelasB = Kelas::query()->create([
+            'kode_kelas' => 'VII-B-NILAI',
+            'nama_kelas' => 'VII B',
+            'tingkat' => 'VII',
+            'tahun_ajaran' => '2026/2027',
+            'status' => 'active',
+        ]);
+        $mapelIpa = MataPelajaran::query()->create([
+            'kode_mapel' => 'IPA',
+            'nama_mapel' => 'Ilmu Pengetahuan Alam',
+            'status' => 'active',
+        ]);
+
+        $guruUserA = $this->user('guru', 'guru.nilai.opsi.a');
+        $guruUserB = $this->user('guru', 'guru.nilai.opsi.b');
+
+        $guruA = Guru::query()->create([
+            'user_id' => $guruUserA->id,
+            'nip' => '198801012026011244',
+            'nama' => 'Guru Opsi A',
+            'status' => 'active',
+        ]);
+        $guruB = Guru::query()->create([
+            'user_id' => $guruUserB->id,
+            'nip' => '198801012026011245',
+            'nama' => 'Guru Opsi B',
+            'status' => 'active',
+        ]);
+
+        Pengampu::query()->create([
+            'guru_id' => $guruA->id,
+            'kelas_id' => $kelas->id,
+            'mata_pelajaran_id' => $mapel->id,
+            'semester_id' => $semester->id,
+        ]);
+        Pengampu::query()->create([
+            'guru_id' => $guruB->id,
+            'kelas_id' => $kelasB->id,
+            'mata_pelajaran_id' => $mapelIpa->id,
+            'semester_id' => $semesterGenap->id,
+        ]);
+
+        [, $siswa] = $this->createStudent('siswa.nilai.opsi', 'S401', $kelas->id);
+
+        $service = app(NilaiFormOptionsService::class);
+
+        $this->assertSame($kelas->id, $service->kelasIdForStudent($siswa->id));
+        $this->assertSame([$mapel->id => 'Matematika'], $service->mataPelajaranOptions($kelas->id, $semester->id));
+        $this->assertSame([$guruA->id => 'Guru Opsi A'], $service->guruOptions($kelas->id, $semester->id, $mapel->id));
+        $this->assertSame([], $service->guruOptions($kelas->id, $semester->id, $mapelIpa->id));
     }
 
     public function test_pembayaran_view_shows_student_class_handler_and_proof(): void
