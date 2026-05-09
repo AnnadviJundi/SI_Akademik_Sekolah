@@ -32,6 +32,14 @@ class EditGuru extends EditRecord
             'username' => $this->record->user?->username,
             'email' => $this->record->user?->email,
             'password' => null,
+            'pengampu' => $this->record->pengampu
+                ->map(fn ($pengampu): array => [
+                    'kelas_id' => $pengampu->kelas_id,
+                    'mata_pelajaran_id' => $pengampu->mata_pelajaran_id,
+                    'semester_id' => $pengampu->semester_id,
+                ])
+                ->values()
+                ->all(),
         ];
     }
 

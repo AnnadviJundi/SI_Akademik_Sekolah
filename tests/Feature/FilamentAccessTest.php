@@ -228,12 +228,16 @@ class FilamentAccessTest extends TestCase
             ->assertSee('Password')
             ->assertSee('Alamat')
             ->assertSee('No. Telepon')
-            ->assertSee('Foto');
+            ->assertSee('Foto')
+            ->assertSee('Mata Pelajaran')
+            ->assertSee('Kelas')
+            ->assertSee('Semester');
     }
 
-    public function test_guru_account_service_creates_guru_with_guru_role_and_profile_fields(): void
+    public function test_guru_account_service_creates_guru_with_guru_role_profile_fields_and_pengampu(): void
     {
         $service = app(GuruAccountService::class);
+        [$semester, $kelas, $mapel] = $this->core();
 
         $guru = $service->create([
             'nip' => '198801012026011234',
@@ -245,6 +249,11 @@ class FilamentAccessTest extends TestCase
             'no_telp' => '081234567890',
             'foto_path' => 'guru-photos/rina.jpg',
             'status' => 'active',
+            'pengampu' => [[
+                'kelas_id' => $kelas->id,
+                'mata_pelajaran_id' => $mapel->id,
+                'semester_id' => $semester->id,
+            ]],
         ]);
 
         $this->assertSame('Rina Marlina', $guru->nama);
@@ -256,6 +265,10 @@ class FilamentAccessTest extends TestCase
         $this->assertSame('rina@sekolah.test', $guru->user->email);
         $this->assertSame('active', $guru->user->status);
         $this->assertTrue(Hash::check('password123', $guru->user->password));
+        $this->assertCount(1, $guru->pengampu);
+        $this->assertSame($kelas->id, $guru->pengampu->first()->kelas_id);
+        $this->assertSame($mapel->id, $guru->pengampu->first()->mata_pelajaran_id);
+        $this->assertSame($semester->id, $guru->pengampu->first()->semester_id);
     }
 
     public function test_guru_detail_shows_subjects_and_classes_taught(): void

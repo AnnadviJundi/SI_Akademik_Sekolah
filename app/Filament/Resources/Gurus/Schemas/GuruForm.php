@@ -3,7 +3,12 @@
 namespace App\Filament\Resources\Gurus\Schemas;
 
 use App\Models\Guru;
+use App\Models\Kelas;
+use App\Models\MataPelajaran;
+use App\Models\Semester;
 use Filament\Forms\Components\FileUpload;
+use Filament\Forms\Components\Repeater;
+use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
 use Filament\Schemas\Components\Section;
@@ -68,6 +73,46 @@ class GuruForm
                             ->helperText(fn (string $operation): ?string => $operation === 'edit' ? 'Kosongkan jika password tidak diubah.' : null),
                     ])
                     ->columns(2),
+                Section::make('Pengampu')
+                    ->schema([
+                        Repeater::make('pengampu')
+                            ->label('Pengampu')
+                            ->schema([
+                                Select::make('mata_pelajaran_id')
+                                    ->label('Mata Pelajaran')
+                                    ->options(fn (): array => MataPelajaran::query()
+                                        ->orderBy('nama_mapel')
+                                        ->pluck('nama_mapel', 'id')
+                                        ->all())
+                                    ->searchable()
+                                    ->preload()
+                                    ->required(),
+                                Select::make('kelas_id')
+                                    ->label('Kelas')
+                                    ->options(fn (): array => Kelas::query()
+                                        ->orderBy('nama_kelas')
+                                        ->pluck('nama_kelas', 'id')
+                                        ->all())
+                                    ->searchable()
+                                    ->preload()
+                                    ->required(),
+                                Select::make('semester_id')
+                                    ->label('Semester')
+                                    ->options(fn (): array => Semester::query()
+                                        ->orderByDesc('tahun_ajaran')
+                                        ->orderBy('semester')
+                                        ->get()
+                                        ->pluck('label', 'id')
+                                        ->all())
+                                    ->searchable()
+                                    ->preload()
+                                    ->required(),
+                            ])
+                            ->columns(3)
+                            ->defaultItems(0)
+                            ->addActionLabel('Tambah Pengampu')
+                            ->columnSpanFull(),
+                    ]),
             ]);
     }
 }
