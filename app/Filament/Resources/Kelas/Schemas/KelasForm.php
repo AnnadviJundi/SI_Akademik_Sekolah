@@ -27,7 +27,9 @@ class KelasForm
                             ->live(),
                         Select::make('tingkat')
                             ->options(fn (Get $get): array => collect(KelasProvisioningService::JENJANGS[$get('jenjang')] ?? [])
-                                ->mapWithKeys(fn (int $tingkat): array => [(string) $tingkat => (string) $tingkat])
+                                ->mapWithKeys(fn (int $tingkat): array => [
+                                    (string) $tingkat => app(KelasProvisioningService::class)->romanizeGrade($tingkat) ?? (string) $tingkat,
+                                ])
                                 ->all())
                             ->required()
                             ->live(),

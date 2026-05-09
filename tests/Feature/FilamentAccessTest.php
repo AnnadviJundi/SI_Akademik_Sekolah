@@ -410,9 +410,9 @@ class FilamentAccessTest extends TestCase
             'status' => 'active',
         ]);
 
-        $this->assertSame('SMP-7A-2027', $kelas->kode_kelas);
-        $this->assertSame('7A - 2027/2028', $kelas->nama_kelas);
-        $this->assertSame('7', $kelas->tingkat);
+        $this->assertSame('SMP-VIIA-2027', $kelas->kode_kelas);
+        $this->assertSame('VII A - 2027/2028', $kelas->nama_kelas);
+        $this->assertSame('VII', $kelas->tingkat);
         $this->assertSame('2027/2028', $kelas->tahun_ajaran);
 
         $this->assertDatabaseHas('semester', [
@@ -423,6 +423,21 @@ class FilamentAccessTest extends TestCase
             'tahun_ajaran' => '2027/2028',
             'semester' => 'Genap',
         ]);
+    }
+
+    public function test_kelas_provisioning_service_accepts_roman_grade_input(): void
+    {
+        $kelas = app(KelasProvisioningService::class)->create([
+            'jenjang' => 'SMA',
+            'tingkat' => 'XI',
+            'rombel' => 'B',
+            'tahun_ajaran' => '2028/2029',
+            'status' => 'active',
+        ]);
+
+        $this->assertSame('SMA-XIB-2028', $kelas->kode_kelas);
+        $this->assertSame('XI B - 2028/2029', $kelas->nama_kelas);
+        $this->assertSame('XI', $kelas->tingkat);
     }
 
     private function user(string $roleCode, string $username): User

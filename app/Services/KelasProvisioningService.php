@@ -16,6 +16,21 @@ class KelasProvisioningService
         'SMA' => [10, 11, 12],
     ];
 
+    public const ROMAN_GRADES = [
+        1 => 'I',
+        2 => 'II',
+        3 => 'III',
+        4 => 'IV',
+        5 => 'V',
+        6 => 'VI',
+        7 => 'VII',
+        8 => 'VIII',
+        9 => 'IX',
+        10 => 'X',
+        11 => 'XI',
+        12 => 'XII',
+    ];
+
     public function create(array $data): Kelas
     {
         return DB::transaction(function () use ($data): Kelas {
@@ -82,26 +97,28 @@ class KelasProvisioningService
     public function previewCode(?string $jenjang, mixed $tingkat, ?string $rombel, ?string $tahunAjaran): string
     {
         $grade = $this->normalizeGrade($tingkat);
+        $romanGrade = $this->romanizeGrade($grade);
         $rombel = $this->normalizeRombel($rombel);
         $yearStart = $this->academicYearStart($tahunAjaran);
 
-        if (! $jenjang || ! $grade || ! $rombel || ! $yearStart) {
+        if (! $jenjang || ! $romanGrade || ! $rombel || ! $yearStart) {
             return '-';
         }
 
-        return sprintf('%s-%s%s-%s', $jenjang, $grade, $rombel, $yearStart);
+        return sprintf('%s-%s%s-%s', $jenjang, $romanGrade, $rombel, $yearStart);
     }
 
     public function previewName(mixed $tingkat, ?string $rombel, ?string $tahunAjaran): string
     {
         $grade = $this->normalizeGrade($tingkat);
+        $romanGrade = $this->romanizeGrade($grade);
         $rombel = $this->normalizeRombel($rombel);
 
-        if (! $grade || ! $rombel || blank($tahunAjaran)) {
+        if (! $romanGrade || ! $rombel || blank($tahunAjaran)) {
             return '-';
         }
 
-        return sprintf('%s%s - %s', $grade, $rombel, $tahunAjaran);
+        return sprintf('%s %s - %s', $romanGrade, $rombel, $tahunAjaran);
     }
 
     private function buildPayload(array $data, ?Kelas $ignore = null): array
@@ -141,7 +158,7 @@ class KelasProvisioningService
         return [
             'kode_kelas' => $kodeKelas,
             'nama_kelas' => $namaKelas,
-            'tingkat' => (string) $tingkat,
+            'tingkat' => $this->romanizeGrade($tingkat),
             'tahun_ajaran' => $tahunAjaran,
             'status' => Arr::get($data, 'status', 'active'),
         ];
@@ -198,6 +215,13 @@ class KelasProvisioningService
         };
     }
 
+    public function romanizeGrade(mixed $grade): ?string
+    {
+        $normalized = $this->normalizeGrade($grade);
+
+        return self::ROMAN_GRADES[$normalized] ?? null;
+    }
+
     private function jenjangForGrade(?int $grade): ?string
     {
         if (! $grade) {
@@ -243,11 +267,15 @@ class KelasProvisioningService
 
     private function extractRombel(Kelas $kelas): ?string
     {
-        if (preg_match('/^(\d+)([A-Z0-9]+)\s-\s\d{4}\/\d{4}$/', $kelas->nama_kelas, $matches)) {
+        if (preg_match('/^([IVX]+)\s([A-Z0-9]+)\s-\s\d{4}\/\d{4}$/', $kelas->nama_kelas, $matches)) {
             return $matches[2];
         }
 
-        if (preg_match('/^([A-Z]+)-\d+([A-Z0-9]+)-\d{4}$/', $kelas->kode_kelas, $matches)) {
+        if (preg_match('/^([A-Z]+)-([IVX]+)([A-Z0-9]+)-\d{4}$/', $kelas->kode_kelas, $matches)) {
+            return $matches[3];
+        }
+
+        if (preg_match('/^(\d+)([A-Z0-9]+)\s-\s\d{4}\/\d{4}$/', $kelas->nama_kelas, $matches)) {
             return $matches[2];
         }
 
