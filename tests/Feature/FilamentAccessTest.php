@@ -15,6 +15,7 @@ use App\Models\Siswa;
 use App\Models\User;
 use App\Services\GuruAccountService;
 use App\Services\KelasProvisioningService;
+use App\Services\SiswaClassTransferService;
 use App\Filament\Resources\Nilais\NilaiResource;
 use App\Filament\Widgets\StudentsPerAcademicYearChart;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -409,6 +410,17 @@ class FilamentAccessTest extends TestCase
             ->assertSee('Naik Tahun Ajaran');
     }
 
+    public function test_list_siswa_page_shows_naik_kelas_massal_and_mutasi_kelas_actions(): void
+    {
+        $admin = $this->user('admin', 'admin.siswa.transfer');
+        [$user, $siswa] = $this->student('siswa.transfer.action', 'S100');
+
+        $this->actingAs($admin)->get('/admin/siswas')
+            ->assertOk()
+            ->assertSee('Naik Kelas Massal')
+            ->assertSee($siswa->nama);
+    }
+
     public function test_kelas_provisioning_service_generates_class_identity_and_semesters(): void
     {
         $kelas = app(KelasProvisioningService::class)->create([
@@ -527,6 +539,98 @@ class FilamentAccessTest extends TestCase
         $this->assertDatabaseHas('semester', [
             'tahun_ajaran' => '2027/2028',
             'semester' => 'Genap',
+        ]);
+    }
+
+    public function test_siswa_class_transfer_service_promotes_active_students_and_skips_final_or_missing_targets(): void
+    {
+        $kelasViiA = Kelas::query()->create([
+            'kode_kelas' => 'SMP-VIIA-2026',
+            'nama_kelas' => 'VII A - 2026/2027',
+            'tingkat' => 'VII',
+            'tahun_ajaran' => '2026/2027',
+            'status' => 'active',
+        ]);
+        $kelasViiiA = Kelas::query()->create([
+            'kode_kelas' => 'SMP-VIIIA-2027',
+            'nama_kelas' => 'VIII A - 2027/2028',
+            'tingkat' => 'VIII',
+            'tahun_ajaran' => '2027/2028',
+            'status' => 'active',
+        ]);
+        $kelasIxA = Kelas::query()->create([
+            'kode_kelas' => 'SMP-IXA-2026',
+            'nama_kelas' => 'IX A - 2026/2027',
+            'tingkat' => 'IX',
+            'tahun_ajaran' => '2026/2027',
+            'status' => 'active',
+        ]);
+        $kelasXiA = Kelas::query()->create([
+            'kode_kelas' => 'SMA-XIA-2026',
+            'nama_kelas' => 'XI A - 2026/2027',
+            'tingkat' => 'XI',
+            'tahun_ajaran' => '2026/2027',
+            'status' => 'active',
+        ]);
+
+        [, $siswaNaik] = $this->createStudent('siswa.naik.massal', 'S200', $kelasViiA->id);
+        [, $siswaLulus] = $this->createStudent('siswa.lulus.massal', 'S201', $kelasIxA->id);
+        [, $siswaTidakAdaKelas] = $this->createStudent('siswa.missing.massal', 'S202', $kelasXiA->id);
+
+        $result = app(SiswaClassTransferService::class)->promoteActiveStudentsToAcademicYear('2027/2028');
+
+        $this->assertSame(1, $result['promoted']);
+        $this->assertSame(1, $result['skipped_final_grade']);
+        $this->assertSame(1, $result['skipped_missing_target']);
+
+        $this->assertDatabaseHas('siswa', [
+            'id' => $siswaNaik->id,
+            'kelas_id' => $kelasViiiA->id,
+        ]);
+        $this->assertDatabaseHas('siswa', [
+            'id' => $siswaLulus->id,
+            'kelas_id' => $kelasIxA->id,
+        ]);
+        $this->assertDatabaseHas('siswa', [
+            'id' => $siswaTidakAdaKelas->id,
+            'kelas_id' => $kelasXiA->id,
+        ]);
+    }
+
+    public function test_siswa_class_transfer_service_can_mutate_selected_students_to_target_class(): void
+    {
+        $kelasViiA = Kelas::query()->create([
+            'kode_kelas' => 'SMP-VIIA-2026',
+            'nama_kelas' => 'VII A - 2026/2027',
+            'tingkat' => 'VII',
+            'tahun_ajaran' => '2026/2027',
+            'status' => 'active',
+        ]);
+        $kelasViiB = Kelas::query()->create([
+            'kode_kelas' => 'SMP-VIIB-2026',
+            'nama_kelas' => 'VII B - 2026/2027',
+            'tingkat' => 'VII',
+            'tahun_ajaran' => '2026/2027',
+            'status' => 'active',
+        ]);
+
+        [, $siswaSatu] = $this->createStudent('siswa.mutasi.satu', 'S300', $kelasViiA->id);
+        [, $siswaDua] = $this->createStudent('siswa.mutasi.dua', 'S301', $kelasViiA->id);
+
+        $result = app(SiswaClassTransferService::class)->moveStudentsToClass(
+            Siswa::query()->whereKey([$siswaSatu->id, $siswaDua->id])->get(),
+            $kelasViiB,
+        );
+
+        $this->assertSame(2, $result['moved']);
+
+        $this->assertDatabaseHas('siswa', [
+            'id' => $siswaSatu->id,
+            'kelas_id' => $kelasViiB->id,
+        ]);
+        $this->assertDatabaseHas('siswa', [
+            'id' => $siswaDua->id,
+            'kelas_id' => $kelasViiB->id,
         ]);
     }
 
