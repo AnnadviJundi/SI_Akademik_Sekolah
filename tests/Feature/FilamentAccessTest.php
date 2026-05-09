@@ -6,11 +6,14 @@ use App\Models\Guru;
 use App\Models\Kelas;
 use App\Models\MataPelajaran;
 use App\Models\Nilai;
+use App\Models\BuktiPembayaran;
+use App\Models\Pembayaran;
 use App\Models\Role;
 use App\Models\Semester;
 use App\Models\Siswa;
 use App\Models\User;
 use App\Filament\Resources\Nilais\NilaiResource;
+use App\Filament\Widgets\StudentsPerAcademicYearChart;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Hash;
 use Livewire\Livewire;
@@ -52,6 +55,88 @@ class FilamentAccessTest extends TestCase
         $this->actingAs($guru)->get('/admin/users')->assertForbidden();
     }
 
+    public function test_admin_dashboard_shows_student_chart_and_summary_stats(): void
+    {
+        $admin = $this->user('admin', 'admin.dashboard');
+        $guruUser = $this->user('guru', 'guru.dashboard');
+        $semester = Semester::query()->create([
+            'tahun_ajaran' => '2026/2027',
+            'semester' => 'Ganjil',
+            'is_active' => true,
+        ]);
+
+        $kelas2024 = Kelas::query()->create([
+            'kode_kelas' => 'VII-24',
+            'nama_kelas' => 'VII 2024',
+            'tingkat' => 'VII',
+            'tahun_ajaran' => '2024/2025',
+            'status' => 'active',
+        ]);
+        $kelas2025 = Kelas::query()->create([
+            'kode_kelas' => 'VIII-25',
+            'nama_kelas' => 'VIII 2025',
+            'tingkat' => 'VIII',
+            'tahun_ajaran' => '2025/2026',
+            'status' => 'active',
+        ]);
+        $kelas2026 = Kelas::query()->create([
+            'kode_kelas' => 'IX-26',
+            'nama_kelas' => 'IX 2026',
+            'tingkat' => 'IX',
+            'tahun_ajaran' => '2026/2027',
+            'status' => 'active',
+        ]);
+
+        Guru::query()->create([
+            'user_id' => $guruUser->id,
+            'nip' => '198801012026011999',
+            'nama' => $guruUser->name,
+            'status' => 'active',
+        ]);
+
+        $this->createStudent('siswa.chart.one', 'CH001', $kelas2024->id);
+        $this->createStudent('siswa.chart.two', 'CH002', $kelas2025->id);
+        $this->createStudent('siswa.chart.three', 'CH003', $kelas2025->id);
+        [, $siswaAktif] = $this->createStudent('siswa.chart.four', 'CH004', $kelas2026->id);
+        [, $siswaTagihan] = $this->createStudent('siswa.chart.five', 'CH005', $kelas2026->id);
+
+        Pembayaran::query()->create([
+            'siswa_id' => $siswaTagihan->id,
+            'semester_id' => $semester->id,
+            'jenis_pembayaran' => 'SPP',
+            'jumlah_tagihan' => 500000,
+            'jumlah_dibayar' => 0,
+            'status' => 'Menunggu Verifikasi',
+            'created_by' => $admin->id,
+        ]);
+        Pembayaran::query()->create([
+            'siswa_id' => $siswaAktif->id,
+            'semester_id' => $semester->id,
+            'jenis_pembayaran' => 'Daftar Ulang',
+            'jumlah_tagihan' => 750000,
+            'jumlah_dibayar' => 750000,
+            'status' => 'Lunas',
+            'created_by' => $admin->id,
+        ]);
+
+        $this->actingAs($admin)->get('/admin')
+            ->assertOk()
+            ->assertSee('Ringkasan Akademik')
+            ->assertSee('Total Siswa')
+            ->assertSee('5')
+            ->assertSee('Total Guru')
+            ->assertSee('1')
+            ->assertSee('Total Kelas')
+            ->assertSee('3')
+            ->assertSee('Pembayaran Menunggu Verifikasi')
+            ->assertSee('Siswa per Tahun Ajaran');
+
+        $chartData = $this->callProtected(new StudentsPerAcademicYearChart(), 'getData');
+
+        $this->assertSame(['2024/2025', '2025/2026', '2026/2027'], $chartData['labels']);
+        $this->assertSame([1, 2, 2], $chartData['datasets'][0]['data']);
+    }
+
     public function test_siswa_can_access_nilais_resource_but_only_their_own_data(): void
     {
         [$siswaUser, $siswa] = $this->student('siswa.one', 'S001');
@@ -85,6 +170,50 @@ class FilamentAccessTest extends TestCase
         $this->assertSame(['90.00'], NilaiResource::getEloquentQuery()->pluck('nilai')->map(fn ($value) => number_format((float) $value, 2, '.', ''))->all());
     }
 
+    public function test_pembayaran_view_shows_student_handler_and_proof_download(): void
+    {
+        $admin = $this->user('admin', 'admin.payment.view');
+        [$semester, $kelas] = $this->core();
+        [, $siswa] = $this->createStudent('siswa.payment.view', 'PAY001', $kelas->id);
+        $handler = $this->user('staf_tu', 'petugas.payment.view');
+
+        $pembayaran = Pembayaran::query()->create([
+            'siswa_id' => $siswa->id,
+            'semester_id' => $semester->id,
+            'jenis_pembayaran' => 'SPP',
+            'jumlah_tagihan' => 500000,
+            'jumlah_dibayar' => 500000,
+            'status' => 'Lunas',
+            'verified_by' => $handler->id,
+            'verified_at' => now(),
+            'created_by' => $admin->id,
+            'updated_by' => $admin->id,
+        ]);
+
+        BuktiPembayaran::query()->create([
+            'pembayaran_id' => $pembayaran->id,
+            'file_name' => 'bukti.png',
+            'file_path' => 'bukti-pembayaran/bukti.png',
+            'file_type' => 'png',
+            'file_size' => 1024,
+            'uploaded_by' => $admin->id,
+            'uploaded_at' => now(),
+        ]);
+
+        $this->actingAs($admin)->get("/admin/pembayarans/{$pembayaran->id}")
+            ->assertOk()
+            ->assertSee($siswa->nama)
+            ->assertSee($handler->name)
+            ->assertSee('Download Bukti');
+    }
+
+    public function test_bukti_pembayaran_resource_is_not_accessible_anymore(): void
+    {
+        $admin = $this->user('admin', 'admin.bukti.disabled');
+
+        $this->actingAs($admin)->get('/admin/bukti-pembayarans')->assertForbidden();
+    }
+
     private function user(string $roleCode, string $username): User
     {
         $role = Role::query()->firstOrCreate(['code' => $roleCode], ['name' => str($roleCode)->headline()]);
@@ -114,6 +243,20 @@ class FilamentAccessTest extends TestCase
         return [$user, $siswa];
     }
 
+    private function createStudent(string $username, string $nis, int $kelasId): array
+    {
+        $user = $this->user('siswa', $username);
+        $siswa = Siswa::query()->create([
+            'user_id' => $user->id,
+            'nis' => $nis,
+            'nama' => $user->name,
+            'kelas_id' => $kelasId,
+            'status' => 'active',
+        ]);
+
+        return [$user, $siswa];
+    }
+
     private function core(): array
     {
         $kelas = Kelas::query()->firstOrCreate(['kode_kelas' => 'VII-A'], [
@@ -130,5 +273,13 @@ class FilamentAccessTest extends TestCase
         ], ['is_active' => true]);
 
         return [$semester, $kelas, $mapel];
+    }
+
+    private function callProtected(object $instance, string $method): mixed
+    {
+        $reflection = new \ReflectionMethod($instance, $method);
+        $reflection->setAccessible(true);
+
+        return $reflection->invoke($instance);
     }
 }

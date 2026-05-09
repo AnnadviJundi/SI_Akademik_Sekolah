@@ -4,11 +4,8 @@ namespace App\Filament\Resources\AuditLogs;
 
 use App\Filament\RoleGate;
 
-use App\Filament\Resources\AuditLogs\Pages\CreateAuditLog;
-use App\Filament\Resources\AuditLogs\Pages\EditAuditLog;
 use App\Filament\Resources\AuditLogs\Pages\ListAuditLogs;
 use App\Filament\Resources\AuditLogs\Pages\ViewAuditLog;
-use App\Filament\Resources\AuditLogs\Schemas\AuditLogForm;
 use App\Filament\Resources\AuditLogs\Schemas\AuditLogInfolist;
 use App\Filament\Resources\AuditLogs\Tables\AuditLogsTable;
 use App\Models\AuditLog;
@@ -32,21 +29,17 @@ class AuditLogResource extends Resource
 
     public static function canCreate(): bool
     {
-        return RoleGate::admin();
+        return false;
     }
 
     public static function canEdit($record): bool
     {
-        return RoleGate::admin();
+        return false;
     }
 
     public static function canDelete($record): bool
     {
-        return RoleGate::admin();
-    }
-    public static function form(Schema $schema): Schema
-    {
-        return AuditLogForm::configure($schema);
+        return false;
     }
 
     public static function infolist(Schema $schema): Schema
@@ -70,9 +63,7 @@ class AuditLogResource extends Resource
     {
         return [
             'index' => ListAuditLogs::route('/'),
-            'create' => CreateAuditLog::route('/create'),
             'view' => ViewAuditLog::route('/{record}'),
-            'edit' => EditAuditLog::route('/{record}/edit'),
         ];
     }
 }

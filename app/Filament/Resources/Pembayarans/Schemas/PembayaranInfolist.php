@@ -4,6 +4,7 @@ namespace App\Filament\Resources\Pembayarans\Schemas;
 
 use App\Models\Pembayaran;
 use Filament\Infolists\Components\TextEntry;
+use Filament\Infolists\Components\ViewEntry;
 use Filament\Schemas\Schema;
 
 class PembayaranInfolist
@@ -12,9 +13,11 @@ class PembayaranInfolist
     {
         return $schema
             ->components([
-                TextEntry::make('siswa.id')
+                TextEntry::make('siswa.nama')
                     ->label('Siswa'),
-                TextEntry::make('semester.id')
+                TextEntry::make('semester.tahun_ajaran')
+                    ->label('Tahun Ajaran'),
+                TextEntry::make('semester.semester')
                     ->label('Semester'),
                 TextEntry::make('jenis_pembayaran'),
                 TextEntry::make('jumlah_tagihan')
@@ -22,17 +25,15 @@ class PembayaranInfolist
                 TextEntry::make('jumlah_dibayar')
                     ->numeric(),
                 TextEntry::make('status'),
-                TextEntry::make('verified_by')
-                    ->numeric()
+                TextEntry::make('verifiedByUser.name')
+                    ->label('Petugas Penangan')
                     ->placeholder('-'),
                 TextEntry::make('verified_at')
                     ->dateTime()
                     ->placeholder('-'),
-                TextEntry::make('created_by')
-                    ->numeric(),
-                TextEntry::make('updated_by')
-                    ->numeric()
-                    ->placeholder('-'),
+                ViewEntry::make('latestBukti.file_path')
+                    ->label('Bukti Pembayaran')
+                    ->view('filament.pembayarans.payment-proof-entry'),
                 TextEntry::make('created_at')
                     ->dateTime()
                     ->placeholder('-'),

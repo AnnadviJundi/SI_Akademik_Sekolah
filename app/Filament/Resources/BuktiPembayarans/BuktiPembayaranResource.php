@@ -27,9 +27,11 @@ class BuktiPembayaranResource extends Resource
 
     protected static ?string $navigationLabel = 'Bukti Pembayaran';
 
+    protected static bool $shouldRegisterNavigation = false;
+
     public static function canViewAny(): bool
     {
-        return RoleGate::has('admin', 'staf_tu', 'siswa');
+        return false;
     }
 
     public static function canCreate(): bool

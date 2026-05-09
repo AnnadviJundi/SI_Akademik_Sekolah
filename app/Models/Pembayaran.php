@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Pembayaran extends Model
@@ -41,4 +42,11 @@ class Pembayaran extends Model
     public function siswa(): BelongsTo { return $this->belongsTo(Siswa::class); }
     public function semester(): BelongsTo { return $this->belongsTo(Semester::class); }
     public function bukti(): HasMany { return $this->hasMany(BuktiPembayaran::class); }
+    public function latestBukti(): HasOne { return $this->hasOne(BuktiPembayaran::class)->latestOfMany('uploaded_at'); }
+    public function verifiedByUser(): BelongsTo { return $this->belongsTo(User::class, 'verified_by'); }
+
+    public function getBuktiFileAttribute(): ?string
+    {
+        return $this->latestBukti?->file_path;
+    }
 }
