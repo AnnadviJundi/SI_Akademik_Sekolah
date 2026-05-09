@@ -210,6 +210,9 @@ class FilamentAccessTest extends TestCase
 
         $this->actingAs($admin)->get('/admin/mata-pelajarans')
             ->assertOk()
+            ->assertSee('Nama Guru Pengampu')
+            ->assertSee('Kelas Diampu')
+            ->assertDontSee('Guru & Kelas Pengampu')
             ->assertSee('Guru Pengampu Mapel')
             ->assertSee('VII A')
             ->assertSee('VII B');

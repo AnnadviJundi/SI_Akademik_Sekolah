@@ -24,8 +24,13 @@ class MataPelajaransTable
                 TextColumn::make('nama_mapel')
                     ->label('Nama Mata Pelajaran')
                     ->searchable(),
-                TextColumn::make('pengampu_summary')
-                    ->label('Guru & Kelas Pengampu')
+                TextColumn::make('guru_pengampu_list')
+                    ->label('Nama Guru Pengampu')
+                    ->placeholder('-')
+                    ->wrap()
+                    ->searchable(),
+                TextColumn::make('kelas_diampu_list')
+                    ->label('Kelas Diampu')
                     ->placeholder('-')
                     ->wrap()
                     ->searchable(),

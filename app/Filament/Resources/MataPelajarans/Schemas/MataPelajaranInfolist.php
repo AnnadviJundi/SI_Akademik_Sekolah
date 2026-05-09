@@ -14,10 +14,6 @@ class MataPelajaranInfolist
             ->components([
                 TextEntry::make('kode_mapel'),
                 TextEntry::make('nama_mapel'),
-                TextEntry::make('pengampu_summary')
-                    ->label('Guru & Kelas Pengampu')
-                    ->placeholder('-')
-                    ->columnSpanFull(),
                 TextEntry::make('guru_pengampu_list')
                     ->label('Nama Guru Pengampu')
                     ->placeholder('-'),
