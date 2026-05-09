@@ -2,6 +2,10 @@
 
 namespace App\Filament\Resources\Pembayarans\Tables;
 
+use App\Filament\RoleGate;
+use App\Models\Pembayaran;
+use App\Services\PembayaranReviewService;
+use Filament\Actions\Action;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
@@ -19,11 +23,7 @@ class PembayaransTable
         return $table
             ->columns([
                 TextColumn::make('siswa.nama')
-                    ->label('Siswa')
-                    ->searchable(),
-                TextColumn::make('siswa.kelas.nama_kelas')
-                    ->label('Kelas')
-                    ->placeholder('-')
+                    ->label('Nama Siswa')
                     ->searchable(),
                 TextColumn::make('semester.tahun_ajaran')
                     ->label('Tahun Ajaran')
@@ -48,12 +48,6 @@ class PembayaransTable
                 TextColumn::make('verified_at')
                     ->dateTime()
                     ->sortable(),
-                TextColumn::make('created_by')
-                    ->numeric()
-                    ->sortable(),
-                TextColumn::make('updated_by')
-                    ->numeric()
-                    ->sortable(),
                 TextColumn::make('created_at')
                     ->dateTime()
                     ->sortable()
@@ -71,6 +65,18 @@ class PembayaransTable
                 TrashedFilter::make(),
             ])
             ->recordActions([
+                Action::make('verify')
+                    ->label('Verifikasi')
+                    ->color('success')
+                    ->requiresConfirmation()
+                    ->visible(fn (Pembayaran $record): bool => RoleGate::has('admin', 'staf_tu') && $record->status === 'Menunggu Verifikasi')
+                    ->action(fn (Pembayaran $record) => app(PembayaranReviewService::class)->verify($record)),
+                Action::make('reject')
+                    ->label('Reject')
+                    ->color('danger')
+                    ->requiresConfirmation()
+                    ->visible(fn (Pembayaran $record): bool => RoleGate::has('admin', 'staf_tu') && $record->status === 'Menunggu Verifikasi')
+                    ->action(fn (Pembayaran $record) => app(PembayaranReviewService::class)->reject($record)),
                 ViewAction::make(),
                 EditAction::make(),
             ])

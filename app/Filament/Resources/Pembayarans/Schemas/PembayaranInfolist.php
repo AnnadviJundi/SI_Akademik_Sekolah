@@ -14,10 +14,7 @@ class PembayaranInfolist
         return $schema
             ->components([
                 TextEntry::make('siswa.nama')
-                    ->label('Siswa'),
-                TextEntry::make('siswa.kelas.nama_kelas')
-                    ->label('Kelas')
-                    ->placeholder('-'),
+                    ->label('Nama Siswa'),
                 TextEntry::make('semester.tahun_ajaran')
                     ->label('Tahun Ajaran'),
                 TextEntry::make('semester.semester')

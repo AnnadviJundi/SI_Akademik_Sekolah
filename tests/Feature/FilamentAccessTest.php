@@ -19,6 +19,7 @@ use App\Services\KelasProvisioningService;
 use App\Services\MataPelajaranAssignmentService;
 use App\Services\MataPelajaranCatalogService;
 use App\Services\NilaiFormOptionsService;
+use App\Services\PembayaranReviewService;
 use App\Services\SiswaClassTransferService;
 use App\Filament\Resources\Nilais\NilaiResource;
 use App\Filament\Widgets\StudentsPerAcademicYearChart;
@@ -435,8 +436,88 @@ class FilamentAccessTest extends TestCase
             ->assertOk()
             ->assertSee($siswa->nama)
             ->assertSee($handler->name)
-            ->assertSee($kelas->nama_kelas)
+            ->assertSee($semester->semester)
+            ->assertSee($semester->tahun_ajaran)
+            ->assertDontSee($kelas->nama_kelas)
             ->assertSee('Download Bukti');
+    }
+
+    public function test_pembayaran_pages_show_verify_and_reject_actions_for_pending_payments(): void
+    {
+        $admin = $this->user('admin', 'admin.payment.review');
+        [$semester, $kelas] = $this->core();
+        [, $siswa] = $this->createStudent('siswa.payment.review', 'PAY002', $kelas->id);
+
+        $pembayaran = Pembayaran::query()->create([
+            'siswa_id' => $siswa->id,
+            'semester_id' => $semester->id,
+            'jenis_pembayaran' => 'SPP',
+            'jumlah_tagihan' => 500000,
+            'jumlah_dibayar' => 500000,
+            'status' => 'Menunggu Verifikasi',
+            'created_by' => $admin->id,
+        ]);
+
+        $this->actingAs($admin)->get('/admin/pembayarans')
+            ->assertOk()
+            ->assertSee('Verifikasi')
+            ->assertSee('Reject')
+            ->assertSee($siswa->nama)
+            ->assertSee($semester->semester)
+            ->assertSee($semester->tahun_ajaran)
+            ->assertDontSee($kelas->nama_kelas);
+
+        $this->actingAs($admin)->get("/admin/pembayarans/{$pembayaran->id}")
+            ->assertOk()
+            ->assertSee('Verifikasi')
+            ->assertSee('Reject')
+            ->assertSee($siswa->nama)
+            ->assertSee($semester->semester)
+            ->assertSee($semester->tahun_ajaran)
+            ->assertDontSee($kelas->nama_kelas);
+    }
+
+    public function test_pembayaran_review_service_verifies_and_rejects_pending_payment(): void
+    {
+        $admin = $this->user('admin', 'admin.payment.service');
+        [$semester, $kelas] = $this->core();
+        [, $siswa] = $this->createStudent('siswa.payment.service', 'PAY003', $kelas->id);
+
+        $pending = Pembayaran::query()->create([
+            'siswa_id' => $siswa->id,
+            'semester_id' => $semester->id,
+            'jenis_pembayaran' => 'SPP',
+            'jumlah_tagihan' => 500000,
+            'jumlah_dibayar' => 500000,
+            'status' => 'Menunggu Verifikasi',
+            'created_by' => $admin->id,
+        ]);
+
+        $rejected = Pembayaran::query()->create([
+            'siswa_id' => $siswa->id,
+            'semester_id' => $semester->id,
+            'jenis_pembayaran' => 'Daftar Ulang',
+            'jumlah_tagihan' => 750000,
+            'jumlah_dibayar' => 250000,
+            'status' => 'Menunggu Verifikasi',
+            'created_by' => $admin->id,
+        ]);
+
+        $this->actingAs($admin);
+
+        app(PembayaranReviewService::class)->verify($pending);
+        app(PembayaranReviewService::class)->reject($rejected);
+
+        $this->assertDatabaseHas('pembayaran', [
+            'id' => $pending->id,
+            'status' => 'Lunas',
+            'verified_by' => $admin->id,
+        ]);
+        $this->assertDatabaseHas('pembayaran', [
+            'id' => $rejected->id,
+            'status' => 'Ditolak',
+            'verified_by' => $admin->id,
+        ]);
     }
 
     public function test_bukti_pembayaran_resource_is_not_accessible_anymore(): void
