@@ -24,14 +24,21 @@ class SiswasTable
     {
         return $table
             ->columns([
-                TextColumn::make('user.name')
-                    ->searchable(),
                 TextColumn::make('nis')
                     ->searchable(),
                 TextColumn::make('nama')
                     ->searchable(),
+                TextColumn::make('user.username')
+                    ->label('Username')
+                    ->searchable(),
                 TextColumn::make('kelas.nama_kelas')
                     ->label('Kelas')
+                    ->searchable(),
+                TextColumn::make('nama_ortu')
+                    ->label('Orang Tua / Wali')
+                    ->searchable(),
+                TextColumn::make('no_telp')
+                    ->label('No. Telepon')
                     ->searchable(),
                 TextColumn::make('status')
                     ->searchable(),

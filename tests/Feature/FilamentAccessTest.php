@@ -20,6 +20,7 @@ use App\Services\MataPelajaranAssignmentService;
 use App\Services\MataPelajaranCatalogService;
 use App\Services\NilaiFormOptionsService;
 use App\Services\PembayaranReviewService;
+use App\Services\SiswaAccountService;
 use App\Services\SiswaClassTransferService;
 use App\Filament\Resources\Nilais\NilaiResource;
 use App\Filament\Widgets\StudentsPerAcademicYearChart;
@@ -742,6 +743,55 @@ class FilamentAccessTest extends TestCase
             ->assertOk()
             ->assertSee('Naik Kelas Massal')
             ->assertSee($siswa->nama);
+    }
+
+    public function test_create_siswa_page_uses_inline_account_fields_instead_of_user_dropdown(): void
+    {
+        $admin = $this->user('admin', 'admin.siswa.create');
+        $this->core();
+
+        $this->actingAs($admin)->get('/admin/siswas/create')
+            ->assertOk()
+            ->assertDontSee('data[user_id]')
+            ->assertSee('Username')
+            ->assertSee('Password')
+            ->assertSee('Foto')
+            ->assertSee('Nama Orang Tua / Wali')
+            ->assertSee('No. Telepon')
+            ->assertSee('Aktif');
+    }
+
+    public function test_siswa_account_service_creates_siswa_with_student_role_profile_fields_and_account(): void
+    {
+        $service = app(SiswaAccountService::class);
+        [, $kelas] = $this->core();
+
+        $siswa = $service->create([
+            'nis' => 'S900',
+            'nama' => 'Rina Siswa',
+            'username' => 'rina.siswa',
+            'email' => 'rina.siswa@sekolah.test',
+            'password' => 'password123',
+            'alamat' => 'Jl. Kenanga No. 20',
+            'nama_ortu' => 'Bapak Rina',
+            'no_telp' => '081298765432',
+            'foto_path' => 'siswa-photos/rina.jpg',
+            'kelas_id' => $kelas->id,
+            'status' => true,
+        ]);
+
+        $this->assertSame('Rina Siswa', $siswa->nama);
+        $this->assertSame('Jl. Kenanga No. 20', $siswa->alamat);
+        $this->assertSame('Bapak Rina', $siswa->nama_ortu);
+        $this->assertSame('081298765432', $siswa->no_telp);
+        $this->assertSame('siswa-photos/rina.jpg', $siswa->foto_path);
+        $this->assertSame('active', $siswa->status);
+        $this->assertSame('siswa', $siswa->user->role->code);
+        $this->assertSame('rina.siswa', $siswa->user->username);
+        $this->assertSame('rina.siswa@sekolah.test', $siswa->user->email);
+        $this->assertSame('active', $siswa->user->status);
+        $this->assertTrue(Hash::check('password123', $siswa->user->password));
+        $this->assertSame($kelas->id, $siswa->kelas_id);
     }
 
     public function test_kelas_provisioning_service_generates_class_identity_and_semesters(): void

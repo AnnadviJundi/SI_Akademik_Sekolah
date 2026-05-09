@@ -13,7 +13,7 @@ class Siswa extends Model
 
     protected $table = 'siswa';
 
-    protected $fillable = ['user_id', 'nis', 'nama', 'kelas_id', 'status'];
+    protected $fillable = ['user_id', 'nis', 'nama', 'alamat', 'nama_ortu', 'no_telp', 'foto_path', 'kelas_id', 'status'];
 
     public function user(): BelongsTo
     {
