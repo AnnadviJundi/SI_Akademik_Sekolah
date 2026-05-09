@@ -322,6 +322,49 @@ class FilamentAccessTest extends TestCase
             ->assertSee('storage/guru-photos/guru-mapel.jpg');
     }
 
+    public function test_guru_index_does_not_show_photo_column(): void
+    {
+        $admin = $this->user('admin', 'admin.guru.index');
+        $guruUser = $this->user('guru', 'guru.index');
+
+        Guru::query()->create([
+            'user_id' => $guruUser->id,
+            'nip' => '198801012026011236',
+            'nama' => 'Guru Index',
+            'foto_path' => 'guru-photos/guru-index.jpg',
+            'status' => 'active',
+        ]);
+
+        $this->actingAs($admin)->get('/admin/gurus')
+            ->assertOk()
+            ->assertDontSee('Foto')
+            ->assertDontSee('storage/guru-photos/guru-index.jpg');
+    }
+
+    public function test_guru_view_shows_large_photo_download_and_pdf_export(): void
+    {
+        $admin = $this->user('admin', 'admin.guru.pdf');
+        $guruUser = $this->user('guru', 'guru.pdf');
+
+        $guru = Guru::query()->create([
+            'user_id' => $guruUser->id,
+            'nip' => '198801012026011237',
+            'nama' => 'Guru PDF',
+            'foto_path' => 'guru-photos/guru-pdf.jpg',
+            'status' => 'active',
+        ]);
+
+        $this->actingAs($admin)->get("/admin/gurus/{$guru->id}")
+            ->assertOk()
+            ->assertSee('storage/guru-photos/guru-pdf.jpg')
+            ->assertSee('Download Foto')
+            ->assertSee('Export PDF');
+
+        $this->actingAs($admin)->get("/admin/gurus/{$guru->id}/pdf")
+            ->assertOk()
+            ->assertHeader('content-type', 'application/pdf');
+    }
+
     private function user(string $roleCode, string $username): User
     {
         $role = Role::query()->firstOrCreate(['code' => $roleCode], ['name' => str($roleCode)->headline()]);
