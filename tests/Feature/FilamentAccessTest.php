@@ -339,7 +339,7 @@ class FilamentAccessTest extends TestCase
             ->assertSee($semester->tahun_ajaran);
     }
 
-    public function test_nilai_form_options_service_filters_subjects_and_teachers_by_class_and_semester(): void
+    public function test_nilai_form_options_service_filters_students_subjects_and_teachers_by_class_and_semester(): void
     {
         [$semester, $kelas, $mapel] = $this->core();
         $semesterGenap = Semester::query()->create([
@@ -390,10 +390,12 @@ class FilamentAccessTest extends TestCase
         ]);
 
         [, $siswa] = $this->createStudent('siswa.nilai.opsi', 'S401', $kelas->id);
+        [, $siswaB] = $this->createStudent('siswa.nilai.opsi.b', 'S402', $kelasB->id);
 
         $service = app(NilaiFormOptionsService::class);
 
-        $this->assertSame($kelas->id, $service->kelasIdForStudent($siswa->id));
+        $this->assertSame([$siswa->id => (string) $siswa->nama], $service->siswaOptions($kelas->id));
+        $this->assertSame([$siswaB->id => (string) $siswaB->nama], $service->siswaOptions($kelasB->id));
         $this->assertSame([$mapel->id => 'Matematika'], $service->mataPelajaranOptions($kelas->id, $semester->id));
         $this->assertSame([$guruA->id => 'Guru Opsi A'], $service->guruOptions($kelas->id, $semester->id, $mapel->id));
         $this->assertSame([], $service->guruOptions($kelas->id, $semester->id, $mapelIpa->id));

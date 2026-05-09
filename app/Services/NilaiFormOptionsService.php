@@ -7,13 +7,13 @@ use App\Models\Siswa;
 
 class NilaiFormOptionsService
 {
-    public function kelasIdForStudent(?int $siswaId): ?int
+    public function siswaOptions(?int $kelasId): array
     {
-        if (! $siswaId) {
-            return null;
-        }
-
-        return Siswa::query()->whereKey($siswaId)->value('kelas_id');
+        return Siswa::query()
+            ->when($kelasId, fn ($query) => $query->where('kelas_id', $kelasId))
+            ->orderBy('nama')
+            ->pluck('nama', 'id')
+            ->all();
     }
 
     public function mataPelajaranOptions(?int $kelasId, ?int $semesterId): array

@@ -18,29 +18,23 @@ class NilaiForm
     {
         return $schema
             ->components([
-                Select::make('siswa_id')
-                    ->relationship('siswa', 'nama')
-                    ->searchable()
-                    ->preload()
-                    ->live()
-                    ->afterStateUpdated(function (Set $set, Get $get, ?int $state): void {
-                        $options = app(NilaiFormOptionsService::class);
-                        $kelasId = $options->kelasIdForStudent($state);
-
-                        $set('kelas_id', $kelasId);
-                        $set('mata_pelajaran_id', null);
-                        $set('guru_id', null);
-                    })
-                    ->required(),
                 Select::make('kelas_id')
                     ->relationship('kelas', 'nama_kelas')
                     ->searchable()
                     ->preload()
                     ->live()
                     ->afterStateUpdated(function (Set $set): void {
+                        $set('siswa_id', null);
                         $set('mata_pelajaran_id', null);
                         $set('guru_id', null);
                     })
+                    ->required(),
+                Select::make('siswa_id')
+                    ->options(fn (Get $get): array => app(NilaiFormOptionsService::class)->siswaOptions(
+                        $get('kelas_id'),
+                    ))
+                    ->searchable()
+                    ->preload()
                     ->required(),
                 Select::make('mata_pelajaran_id')
                     ->options(fn (Get $get): array => app(NilaiFormOptionsService::class)->mataPelajaranOptions(
@@ -67,6 +61,7 @@ class NilaiForm
                     ->preload()
                     ->live()
                     ->afterStateUpdated(function (Set $set): void {
+                        $set('siswa_id', null);
                         $set('mata_pelajaran_id', null);
                         $set('guru_id', null);
                     })
