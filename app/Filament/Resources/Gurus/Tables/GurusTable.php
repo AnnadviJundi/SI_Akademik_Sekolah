@@ -8,6 +8,7 @@ use Filament\Actions\EditAction;
 use Filament\Actions\ForceDeleteBulkAction;
 use Filament\Actions\RestoreBulkAction;
 use Filament\Actions\ViewAction;
+use Filament\Tables\Columns\ImageColumn;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\TrashedFilter;
 use Filament\Tables\Table;
@@ -18,11 +19,26 @@ class GurusTable
     {
         return $table
             ->columns([
-                TextColumn::make('user.name')
+                ImageColumn::make('foto_path')
+                    ->label('Foto')
+                    ->disk('public')
+                    ->circular(),
+                TextColumn::make('nama')
                     ->searchable(),
                 TextColumn::make('nip')
+                    ->label('NIP')
                     ->searchable(),
-                TextColumn::make('nama')
+                TextColumn::make('user.username')
+                    ->label('Username')
+                    ->searchable(),
+                TextColumn::make('mata_pelajaran_list')
+                    ->label('Mata Pelajaran')
+                    ->wrap(),
+                TextColumn::make('kelas_ajar_list')
+                    ->label('Kelas Ajar')
+                    ->wrap(),
+                TextColumn::make('no_telp')
+                    ->label('No. Telepon')
                     ->searchable(),
                 TextColumn::make('status')
                     ->searchable(),

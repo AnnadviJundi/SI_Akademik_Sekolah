@@ -8,10 +8,12 @@ use App\Models\MataPelajaran;
 use App\Models\Nilai;
 use App\Models\BuktiPembayaran;
 use App\Models\Pembayaran;
+use App\Models\Pengampu;
 use App\Models\Role;
 use App\Models\Semester;
 use App\Models\Siswa;
 use App\Models\User;
+use App\Services\GuruAccountService;
 use App\Filament\Resources\Nilais\NilaiResource;
 use App\Filament\Widgets\StudentsPerAcademicYearChart;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -170,7 +172,7 @@ class FilamentAccessTest extends TestCase
         $this->assertSame(['90.00'], NilaiResource::getEloquentQuery()->pluck('nilai')->map(fn ($value) => number_format((float) $value, 2, '.', ''))->all());
     }
 
-    public function test_pembayaran_view_shows_student_handler_and_proof_download(): void
+    public function test_pembayaran_view_shows_student_class_handler_and_proof(): void
     {
         $admin = $this->user('admin', 'admin.payment.view');
         [$semester, $kelas] = $this->core();
@@ -204,6 +206,7 @@ class FilamentAccessTest extends TestCase
             ->assertOk()
             ->assertSee($siswa->nama)
             ->assertSee($handler->name)
+            ->assertSee($kelas->nama_kelas)
             ->assertSee('Download Bukti');
     }
 
@@ -212,6 +215,96 @@ class FilamentAccessTest extends TestCase
         $admin = $this->user('admin', 'admin.bukti.disabled');
 
         $this->actingAs($admin)->get('/admin/bukti-pembayarans')->assertForbidden();
+    }
+
+    public function test_create_guru_page_uses_inline_account_fields_instead_of_user_dropdown(): void
+    {
+        $admin = $this->user('admin', 'admin.guru.create');
+
+        $this->actingAs($admin)->get('/admin/gurus/create')
+            ->assertOk()
+            ->assertDontSee('data[user_id]')
+            ->assertSee('Username')
+            ->assertSee('Password')
+            ->assertSee('Alamat')
+            ->assertSee('No. Telepon')
+            ->assertSee('Foto');
+    }
+
+    public function test_guru_account_service_creates_guru_with_guru_role_and_profile_fields(): void
+    {
+        $service = app(GuruAccountService::class);
+
+        $guru = $service->create([
+            'nip' => '198801012026011234',
+            'nama' => 'Rina Marlina',
+            'username' => 'rina.marlina',
+            'email' => 'rina@sekolah.test',
+            'password' => 'password123',
+            'alamat' => 'Jl. Melati No. 10',
+            'no_telp' => '081234567890',
+            'foto_path' => 'guru-photos/rina.jpg',
+            'status' => 'active',
+        ]);
+
+        $this->assertSame('Rina Marlina', $guru->nama);
+        $this->assertSame('Jl. Melati No. 10', $guru->alamat);
+        $this->assertSame('081234567890', $guru->no_telp);
+        $this->assertSame('guru-photos/rina.jpg', $guru->foto_path);
+        $this->assertSame('guru', $guru->user->role->code);
+        $this->assertSame('rina.marlina', $guru->user->username);
+        $this->assertSame('rina@sekolah.test', $guru->user->email);
+        $this->assertSame('active', $guru->user->status);
+        $this->assertTrue(Hash::check('password123', $guru->user->password));
+    }
+
+    public function test_guru_detail_shows_subjects_and_classes_taught(): void
+    {
+        $admin = $this->user('admin', 'admin.guru.view');
+        $guruUser = $this->user('guru', 'guru.mapel');
+        [$semester, $kelas, $mapel] = $this->core();
+        $kelasB = Kelas::query()->create([
+            'kode_kelas' => 'VII-B',
+            'nama_kelas' => 'VII B',
+            'tingkat' => 'VII',
+            'tahun_ajaran' => '2026/2027',
+            'status' => 'active',
+        ]);
+        $mapelIpa = MataPelajaran::query()->create([
+            'kode_mapel' => 'IPA',
+            'nama_mapel' => 'Ilmu Pengetahuan Alam',
+            'status' => 'active',
+        ]);
+
+        $guru = Guru::query()->create([
+            'user_id' => $guruUser->id,
+            'nip' => '198801012026011235',
+            'nama' => 'Guru Mapel',
+            'alamat' => 'Jl. Guru',
+            'no_telp' => '081111111111',
+            'status' => 'active',
+        ]);
+
+        Pengampu::query()->create([
+            'guru_id' => $guru->id,
+            'kelas_id' => $kelas->id,
+            'mata_pelajaran_id' => $mapel->id,
+            'semester_id' => $semester->id,
+        ]);
+        Pengampu::query()->create([
+            'guru_id' => $guru->id,
+            'kelas_id' => $kelasB->id,
+            'mata_pelajaran_id' => $mapelIpa->id,
+            'semester_id' => $semester->id,
+        ]);
+
+        $this->actingAs($admin)->get("/admin/gurus/{$guru->id}")
+            ->assertOk()
+            ->assertSee('Matematika')
+            ->assertSee('Ilmu Pengetahuan Alam')
+            ->assertSee('VII A')
+            ->assertSee('VII B')
+            ->assertSee('081111111111');
     }
 
     private function user(string $roleCode, string $username): User

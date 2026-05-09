@@ -85,6 +85,16 @@ class GuruResource extends Resource
                 SoftDeletingScope::class,
             ]);
     }
+
+    public static function getEloquentQuery(): Builder
+    {
+        return parent::getEloquentQuery()
+            ->with([
+                'user.role',
+                'pengampu.kelas',
+                'pengampu.mataPelajaran',
+            ]);
+    }
 }
 
 
