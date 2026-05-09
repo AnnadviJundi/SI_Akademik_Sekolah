@@ -410,7 +410,7 @@ class FilamentAccessTest extends TestCase
             ->assertSee('Naik Tahun Ajaran');
     }
 
-    public function test_list_siswa_page_shows_naik_kelas_massal_and_mutasi_kelas_actions(): void
+    public function test_list_siswa_page_shows_naik_kelas_massal_action(): void
     {
         $admin = $this->user('admin', 'admin.siswa.transfer');
         [$user, $siswa] = $this->student('siswa.transfer.action', 'S100');
