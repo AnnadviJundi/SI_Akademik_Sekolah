@@ -6,10 +6,13 @@ use App\Models\Guru;
 use App\Models\Kelas;
 use App\Models\Semester;
 use App\Services\AcademicPeriodService;
+use App\Services\MataPelajaranCatalogService;
 use Filament\Forms\Components\Repeater;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
 use Filament\Schemas\Components\Section;
+use Filament\Schemas\Components\Utilities\Get;
+use Filament\Schemas\Components\Utilities\Set;
 use Filament\Schemas\Schema;
 
 class MataPelajaranForm
@@ -21,9 +24,24 @@ class MataPelajaranForm
                 Section::make('Data Mata Pelajaran')
                     ->schema([
                         TextInput::make('kode_mapel')
-                            ->required(),
+                            ->required()
+                            ->helperText('Otomatis terisi dari nama mapel, tetapi tetap bisa diubah manual.'),
                         TextInput::make('nama_mapel')
-                            ->required(),
+                            ->required()
+                            ->datalist(app(MataPelajaranCatalogService::class)->suggestions())
+                            ->live(debounce: 500)
+                            ->helperText('Bisa pilih dari saran yang ada atau ketik mapel baru sendiri.')
+                            ->afterStateUpdated(function (Set $set, Get $get, ?string $old, ?string $state): void {
+                                $catalog = app(MataPelajaranCatalogService::class);
+                                $currentCode = (string) ($get('kode_mapel') ?? '');
+                                $generatedOldCode = $catalog->generateCode($old);
+
+                                if ($currentCode !== '' && $currentCode !== $generatedOldCode) {
+                                    return;
+                                }
+
+                                $set('kode_mapel', $catalog->generateCode($state));
+                            }),
                         TextInput::make('status')
                             ->required()
                             ->default('active'),

@@ -17,6 +17,7 @@ use App\Services\GuruAccountService;
 use App\Services\AcademicPeriodService;
 use App\Services\KelasProvisioningService;
 use App\Services\MataPelajaranAssignmentService;
+use App\Services\MataPelajaranCatalogService;
 use App\Services\SiswaClassTransferService;
 use App\Filament\Resources\Nilais\NilaiResource;
 use App\Filament\Widgets\StudentsPerAcademicYearChart;
@@ -229,7 +230,7 @@ class FilamentAccessTest extends TestCase
     {
         $admin = $this->user('admin', 'admin.mapel.create');
         $guruUser = $this->user('guru', 'guru.mapel.create');
-        [$semester, $kelas] = $this->core();
+        $this->core();
 
         Guru::query()->create([
             'user_id' => $guruUser->id,
@@ -244,7 +245,11 @@ class FilamentAccessTest extends TestCase
             ->assertSee('Guru')
             ->assertSee('Kelas')
             ->assertSee('Semester')
-            ->assertSee('Tambah Pengampu');
+            ->assertSee('Tambah Pengampu')
+            ->assertSee('Bisa pilih dari saran yang ada atau ketik mapel baru sendiri.')
+            ->assertSee('Matematika')
+            ->assertSee('Bahasa Indonesia')
+            ->assertSee('Otomatis terisi dari nama mapel, tetapi tetap bisa diubah manual.');
     }
 
     public function test_mata_pelajaran_assignment_service_creates_mapel_with_pengampu(): void
@@ -276,6 +281,17 @@ class FilamentAccessTest extends TestCase
         $this->assertSame($kelas->id, $mapel->pengampu->first()->kelas_id);
         $this->assertSame($semester->id, $mapel->pengampu->first()->semester_id);
         $this->assertSame($mapel->id, $mapel->pengampu->first()->mata_pelajaran_id);
+    }
+
+    public function test_mata_pelajaran_catalog_service_generates_subject_based_codes(): void
+    {
+        $service = app(MataPelajaranCatalogService::class);
+
+        $this->assertSame('MTK', $service->generateCode('Matematika'));
+        $this->assertSame('BIN', $service->generateCode('Bahasa Indonesia'));
+        $this->assertSame('IPA', $service->generateCode('Ilmu Pengetahuan Alam'));
+        $this->assertSame('SBK', $service->generateCode('Seni Budaya'));
+        $this->assertSame('FIS', $service->generateCode('Fisika'));
     }
 
     public function test_nilai_pages_show_student_class_subject_teacher_and_academic_period(): void

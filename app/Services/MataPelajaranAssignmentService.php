@@ -32,11 +32,17 @@ class MataPelajaranAssignmentService
 
     private function mataPelajaranPayload(array $data): array
     {
-        return Arr::only($data, [
+        $payload = Arr::only($data, [
             'kode_mapel',
             'nama_mapel',
             'status',
         ]);
+
+        if (blank($payload['kode_mapel'] ?? null)) {
+            $payload['kode_mapel'] = app(MataPelajaranCatalogService::class)->generateCode($payload['nama_mapel'] ?? null);
+        }
+
+        return $payload;
     }
 
     private function syncPengampu(MataPelajaran $mataPelajaran, array $assignments): void
