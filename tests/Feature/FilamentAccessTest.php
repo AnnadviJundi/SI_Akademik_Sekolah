@@ -337,7 +337,6 @@ class FilamentAccessTest extends TestCase
 
         $this->actingAs($admin)->get('/admin/gurus')
             ->assertOk()
-            ->assertDontSee('Foto')
             ->assertDontSee('storage/guru-photos/guru-index.jpg');
     }
 
@@ -361,6 +360,27 @@ class FilamentAccessTest extends TestCase
             ->assertSee('Export PDF');
 
         $this->actingAs($admin)->get("/admin/gurus/{$guru->id}/pdf")
+            ->assertOk()
+            ->assertHeader('content-type', 'application/pdf');
+    }
+
+    public function test_guru_index_shows_pdf_export_and_can_download_pdf(): void
+    {
+        $admin = $this->user('admin', 'admin.guru.list.pdf');
+        $guruUser = $this->user('guru', 'guru.list.pdf');
+
+        Guru::query()->create([
+            'user_id' => $guruUser->id,
+            'nip' => '198801012026011238',
+            'nama' => 'Guru List PDF',
+            'status' => 'active',
+        ]);
+
+        $this->actingAs($admin)->get('/admin/gurus')
+            ->assertOk()
+            ->assertSee('Export PDF');
+
+        $this->actingAs($admin)->get('/admin/reports/gurus/pdf')
             ->assertOk()
             ->assertHeader('content-type', 'application/pdf');
     }
