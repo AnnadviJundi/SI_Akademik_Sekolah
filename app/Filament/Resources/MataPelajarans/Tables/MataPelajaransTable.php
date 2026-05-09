@@ -19,10 +19,18 @@ class MataPelajaransTable
         return $table
             ->columns([
                 TextColumn::make('kode_mapel')
+                    ->label('Kode Mapel')
                     ->searchable(),
                 TextColumn::make('nama_mapel')
+                    ->label('Nama Mata Pelajaran')
+                    ->searchable(),
+                TextColumn::make('pengampu_summary')
+                    ->label('Guru & Kelas Pengampu')
+                    ->placeholder('-')
+                    ->wrap()
                     ->searchable(),
                 TextColumn::make('status')
+                    ->badge()
                     ->searchable(),
                 TextColumn::make('created_at')
                     ->dateTime()

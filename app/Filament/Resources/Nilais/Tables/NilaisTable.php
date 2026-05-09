@@ -18,25 +18,31 @@ class NilaisTable
     {
         return $table
             ->columns([
-                TextColumn::make('siswa.id')
+                TextColumn::make('siswa.nama')
+                    ->label('Nama Siswa')
                     ->searchable(),
-                TextColumn::make('kelas.id')
+                TextColumn::make('kelas.nama_kelas')
+                    ->label('Kelas')
                     ->searchable(),
-                TextColumn::make('mataPelajaran.id')
+                TextColumn::make('mataPelajaran.nama_mapel')
+                    ->label('Mata Pelajaran')
                     ->searchable(),
-                TextColumn::make('guru.id')
+                TextColumn::make('guru.nama')
+                    ->label('Nama Guru')
+                    ->placeholder('-')
                     ->searchable(),
-                TextColumn::make('semester.id')
+                TextColumn::make('semester.semester')
+                    ->label('Semester')
+                    ->badge()
+                    ->searchable(),
+                TextColumn::make('semester.tahun_ajaran')
+                    ->label('Tahun Ajaran')
                     ->searchable(),
                 TextColumn::make('jenis_nilai')
+                    ->badge()
+                    ->formatStateUsing(fn (string $state): string => str($state)->headline()->toString())
                     ->searchable(),
                 TextColumn::make('nilai')
-                    ->numeric()
-                    ->sortable(),
-                TextColumn::make('created_by')
-                    ->numeric()
-                    ->sortable(),
-                TextColumn::make('updated_by')
                     ->numeric()
                     ->sortable(),
                 TextColumn::make('created_at')

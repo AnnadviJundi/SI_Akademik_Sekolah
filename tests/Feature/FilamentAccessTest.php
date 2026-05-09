@@ -175,6 +175,96 @@ class FilamentAccessTest extends TestCase
         $this->assertSame(['90.00'], NilaiResource::getEloquentQuery()->pluck('nilai')->map(fn ($value) => number_format((float) $value, 2, '.', ''))->all());
     }
 
+    public function test_mata_pelajaran_pages_show_teacher_and_classes_taught(): void
+    {
+        $admin = $this->user('admin', 'admin.mapel.view');
+        $guruUser = $this->user('guru', 'guru.mapel.pengampu');
+        [$semester, $kelas, $mapel] = $this->core();
+        $kelasB = Kelas::query()->create([
+            'kode_kelas' => 'VII-B-MAPEL',
+            'nama_kelas' => 'VII B',
+            'tingkat' => 'VII',
+            'tahun_ajaran' => '2026/2027',
+            'status' => 'active',
+        ]);
+
+        $guru = Guru::query()->create([
+            'user_id' => $guruUser->id,
+            'nip' => '198801012026011240',
+            'nama' => 'Guru Pengampu Mapel',
+            'status' => 'active',
+        ]);
+
+        Pengampu::query()->create([
+            'guru_id' => $guru->id,
+            'kelas_id' => $kelas->id,
+            'mata_pelajaran_id' => $mapel->id,
+            'semester_id' => $semester->id,
+        ]);
+        Pengampu::query()->create([
+            'guru_id' => $guru->id,
+            'kelas_id' => $kelasB->id,
+            'mata_pelajaran_id' => $mapel->id,
+            'semester_id' => $semester->id,
+        ]);
+
+        $this->actingAs($admin)->get('/admin/mata-pelajarans')
+            ->assertOk()
+            ->assertSee('Guru Pengampu Mapel')
+            ->assertSee('VII A')
+            ->assertSee('VII B');
+
+        $this->actingAs($admin)->get("/admin/mata-pelajarans/{$mapel->id}")
+            ->assertOk()
+            ->assertSee('Guru Pengampu Mapel')
+            ->assertSee('VII A')
+            ->assertSee('VII B');
+    }
+
+    public function test_nilai_pages_show_student_class_subject_teacher_and_academic_period(): void
+    {
+        $admin = $this->user('admin', 'admin.nilai.view');
+        $guruUser = $this->user('guru', 'guru.nilai.view');
+        [$semester, $kelas, $mapel] = $this->core();
+        [, $siswa] = $this->createStudent('siswa.nilai.view', 'S400', $kelas->id);
+
+        $guru = Guru::query()->create([
+            'user_id' => $guruUser->id,
+            'nip' => '198801012026011241',
+            'nama' => 'Guru Nilai View',
+            'status' => 'active',
+        ]);
+
+        $nilai = Nilai::query()->create([
+            'siswa_id' => $siswa->id,
+            'kelas_id' => $kelas->id,
+            'mata_pelajaran_id' => $mapel->id,
+            'guru_id' => $guru->id,
+            'semester_id' => $semester->id,
+            'jenis_nilai' => 'uts',
+            'nilai' => 88,
+            'created_by' => $admin->id,
+        ]);
+
+        $this->actingAs($admin)->get('/admin/nilais')
+            ->assertOk()
+            ->assertSee($siswa->nama)
+            ->assertSee($kelas->nama_kelas)
+            ->assertSee($mapel->nama_mapel)
+            ->assertSee($guru->nama)
+            ->assertSee($semester->semester)
+            ->assertSee($semester->tahun_ajaran);
+
+        $this->actingAs($admin)->get("/admin/nilais/{$nilai->id}")
+            ->assertOk()
+            ->assertSee($siswa->nama)
+            ->assertSee($kelas->nama_kelas)
+            ->assertSee($mapel->nama_mapel)
+            ->assertSee($guru->nama)
+            ->assertSee($semester->semester)
+            ->assertSee($semester->tahun_ajaran);
+    }
+
     public function test_pembayaran_view_shows_student_class_handler_and_proof(): void
     {
         $admin = $this->user('admin', 'admin.payment.view');

@@ -12,28 +12,25 @@ class NilaiInfolist
     {
         return $schema
             ->components([
-                TextEntry::make('siswa.id')
-                    ->label('Siswa'),
-                TextEntry::make('kelas.id')
+                TextEntry::make('siswa.nama')
+                    ->label('Nama Siswa'),
+                TextEntry::make('kelas.nama_kelas')
                     ->label('Kelas'),
-                TextEntry::make('mataPelajaran.id')
-                    ->label('Mata pelajaran'),
-                TextEntry::make('guru.id')
-                    ->label('Guru')
+                TextEntry::make('mataPelajaran.nama_mapel')
+                    ->label('Mata Pelajaran'),
+                TextEntry::make('guru.nama')
+                    ->label('Nama Guru')
                     ->placeholder('-'),
-                TextEntry::make('semester.id')
+                TextEntry::make('semester.semester')
                     ->label('Semester'),
+                TextEntry::make('semester.tahun_ajaran')
+                    ->label('Tahun Ajaran'),
                 TextEntry::make('jenis_nilai'),
                 TextEntry::make('nilai')
                     ->numeric(),
                 TextEntry::make('catatan')
                     ->placeholder('-')
                     ->columnSpanFull(),
-                TextEntry::make('created_by')
-                    ->numeric(),
-                TextEntry::make('updated_by')
-                    ->numeric()
-                    ->placeholder('-'),
                 TextEntry::make('created_at')
                     ->dateTime()
                     ->placeholder('-'),
