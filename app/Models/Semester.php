@@ -11,6 +11,20 @@ class Semester extends Model
 
     protected $fillable = ['tahun_ajaran', 'semester', 'is_active'];
 
+    protected static function booted(): void
+    {
+        static::saved(function (Semester $semester): void {
+            if (! $semester->is_active) {
+                return;
+            }
+
+            static::query()
+                ->whereKeyNot($semester->getKey())
+                ->where('is_active', true)
+                ->update(['is_active' => false]);
+        });
+    }
+
     protected function casts(): array
     {
         return ['is_active' => 'boolean'];

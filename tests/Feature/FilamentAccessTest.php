@@ -14,6 +14,7 @@ use App\Models\Semester;
 use App\Models\Siswa;
 use App\Models\User;
 use App\Services\GuruAccountService;
+use App\Services\AcademicPeriodService;
 use App\Services\KelasProvisioningService;
 use App\Services\SiswaClassTransferService;
 use App\Filament\Resources\Nilais\NilaiResource;
@@ -410,6 +411,21 @@ class FilamentAccessTest extends TestCase
             ->assertSee('Naik Tahun Ajaran');
     }
 
+    public function test_list_semester_page_shows_set_aktif_action(): void
+    {
+        $admin = $this->user('admin', 'admin.semester.active');
+
+        Semester::query()->create([
+            'tahun_ajaran' => '2026/2027',
+            'semester' => 'Ganjil',
+            'is_active' => false,
+        ]);
+
+        $this->actingAs($admin)->get('/admin/semesters')
+            ->assertOk()
+            ->assertSee('Set Aktif');
+    }
+
     public function test_list_siswa_page_shows_naik_kelas_massal_action(): void
     {
         $admin = $this->user('admin', 'admin.siswa.transfer');
@@ -632,6 +648,33 @@ class FilamentAccessTest extends TestCase
             'id' => $siswaDua->id,
             'kelas_id' => $kelasViiB->id,
         ]);
+    }
+
+    public function test_academic_period_service_activates_only_one_semester_and_derives_active_year(): void
+    {
+        $semesterOne = Semester::query()->create([
+            'tahun_ajaran' => '2026/2027',
+            'semester' => 'Ganjil',
+            'is_active' => true,
+        ]);
+        $semesterTwo = Semester::query()->create([
+            'tahun_ajaran' => '2026/2027',
+            'semester' => 'Genap',
+            'is_active' => false,
+        ]);
+
+        app(AcademicPeriodService::class)->activateSemester($semesterTwo);
+
+        $this->assertDatabaseHas('semester', [
+            'id' => $semesterOne->id,
+            'is_active' => false,
+        ]);
+        $this->assertDatabaseHas('semester', [
+            'id' => $semesterTwo->id,
+            'is_active' => true,
+        ]);
+        $this->assertSame($semesterTwo->id, app(AcademicPeriodService::class)->getActiveSemester()?->id);
+        $this->assertSame('2026/2027', app(AcademicPeriodService::class)->getActiveAcademicYear());
     }
 
     private function user(string $roleCode, string $username): User

@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Services\AcademicPeriodService;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -51,7 +52,7 @@ class AuditLog extends Model
 
         if ($period === 'semester' || filled($semesterId)) {
             $semester = Semester::query()->find($semesterId)
-                ?? Semester::query()->where('is_active', true)->latest('id')->first();
+                ?? app(AcademicPeriodService::class)->getActiveSemester();
 
             if (! $semester) {
                 $query->whereRaw('1 = 0');
