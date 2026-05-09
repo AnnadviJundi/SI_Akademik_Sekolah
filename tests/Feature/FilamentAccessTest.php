@@ -16,6 +16,7 @@ use App\Models\User;
 use App\Services\GuruAccountService;
 use App\Services\AcademicPeriodService;
 use App\Services\KelasProvisioningService;
+use App\Services\MataPelajaranAssignmentService;
 use App\Services\SiswaClassTransferService;
 use App\Filament\Resources\Nilais\NilaiResource;
 use App\Filament\Widgets\StudentsPerAcademicYearChart;
@@ -222,6 +223,59 @@ class FilamentAccessTest extends TestCase
             ->assertSee('Guru Pengampu Mapel')
             ->assertSee('VII A')
             ->assertSee('VII B');
+    }
+
+    public function test_create_mata_pelajaran_page_allows_inline_pengampu_assignment(): void
+    {
+        $admin = $this->user('admin', 'admin.mapel.create');
+        $guruUser = $this->user('guru', 'guru.mapel.create');
+        [$semester, $kelas] = $this->core();
+
+        Guru::query()->create([
+            'user_id' => $guruUser->id,
+            'nip' => '198801012026011242',
+            'nama' => 'Guru Create Mapel',
+            'status' => 'active',
+        ]);
+
+        $this->actingAs($admin)->get('/admin/mata-pelajarans/create')
+            ->assertOk()
+            ->assertSee('Guru & Kelas Pengampu')
+            ->assertSee('Guru')
+            ->assertSee('Kelas')
+            ->assertSee('Semester')
+            ->assertSee('Tambah Pengampu');
+    }
+
+    public function test_mata_pelajaran_assignment_service_creates_mapel_with_pengampu(): void
+    {
+        $guruUser = $this->user('guru', 'guru.mapel.service');
+        [$semester, $kelas] = $this->core();
+
+        $guru = Guru::query()->create([
+            'user_id' => $guruUser->id,
+            'nip' => '198801012026011243',
+            'nama' => 'Guru Service Mapel',
+            'status' => 'active',
+        ]);
+
+        $mapel = app(MataPelajaranAssignmentService::class)->create([
+            'kode_mapel' => 'BIN',
+            'nama_mapel' => 'Bahasa Indonesia',
+            'status' => 'active',
+            'pengampu' => [[
+                'guru_id' => $guru->id,
+                'kelas_id' => $kelas->id,
+                'semester_id' => $semester->id,
+            ]],
+        ]);
+
+        $this->assertSame('Bahasa Indonesia', $mapel->nama_mapel);
+        $this->assertCount(1, $mapel->pengampu);
+        $this->assertSame($guru->id, $mapel->pengampu->first()->guru_id);
+        $this->assertSame($kelas->id, $mapel->pengampu->first()->kelas_id);
+        $this->assertSame($semester->id, $mapel->pengampu->first()->semester_id);
+        $this->assertSame($mapel->id, $mapel->pengampu->first()->mata_pelajaran_id);
     }
 
     public function test_nilai_pages_show_student_class_subject_teacher_and_academic_period(): void
